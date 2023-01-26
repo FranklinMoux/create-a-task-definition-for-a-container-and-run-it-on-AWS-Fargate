@@ -1,0 +1,61 @@
+# create a task definition for a container and run it on AWS Fargate
+# create a task definition with a single container named web-app running the nginx:latest image and run it on a Fargate cluster using the specified subnets and security groups
+# You can then use the AWS Management Console or the ECS API to monitor the status of the container and make any necessary changes
+
+import boto3
+
+# Initialize the ECS client
+ecs_client = boto3.client('ecs')
+
+# Define the container image and name
+container_name = 'web-app'
+container_image = 'nginx:latest'
+
+# Define the task definition
+task_definition = {
+    'family': 'web-app',
+    'containerDefinitions': [
+        {
+            'name': container_name,
+            'image': container_image,
+            'portMappings': [
+                {
+                    'containerPort': 80,
+                    'hostPort': 80
+                }
+            ],
+            'essential': True
+        }
+    ],
+    'networkMode': 'awsvpc',
+    'executionRoleArn': 'arn:aws:iam::[account_id]:role/ecsTaskExecutionRole'
+}
+
+# Register the task definition
+response = ecs_client.register_task_definition(**task_definition)
+task_definition_arn = response['taskDefinition']['taskDefinitionArn']
+
+# Run the task on Fargate
+response = ecs_client.run_task(
+    cluster='default',
+    taskDefinition=task_definition_arn,
+    launchType='FARGATE',
+    networkConfiguration={
+        'awsvpcConfiguration': {
+            'subnets': [
+                'subnet-01234567890abcdef0',
+                'subnet-01234567890abcdef1'
+            ],
+            'securityGroups': [
+                'sg-01234567890abcdef0'
+            ],
+            'assignPublicIp': 'ENABLED'
+        }
+    }
+)
+
+# Extract the task ARN
+task_arn = response['tasks'][0]['taskArn']
+
+# Print the task ARN
+print(f'Task {task_arn} is running on Fargate')
